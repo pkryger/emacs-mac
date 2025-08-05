@@ -110,7 +110,7 @@ enum {
 #endif
 
 static void mac_within_gui_and_here (void (^) (void),
-				     void (^) (void));
+                                     void (CF_NOESCAPE ^) (void));
 static void mac_within_gui_allowing_inner_lisp (void (^) (void));
 static void mac_within_lisp (void (^) (void));
 static void mac_within_lisp_deferred_unless_popup (void (^) (void));
@@ -627,8 +627,8 @@ mac_within_app (void (^block) (void))
    descendant windows.  Set *stop to YES in the block to abort further
    processing of the child windows subtree.  */
 
-- (void)enumerateChildWindowsUsingBlock:(NS_NOESCAPE void
-					 (^)(NSWindow *child, BOOL *stop))block
+- (void)enumerateChildWindowsUsingBlock:(void
+					 (NS_NOESCAPE ^)(NSWindow *child, BOOL *stop))block
 {
   for (NSWindow *childWindow in self.childWindows)
     {
@@ -901,7 +901,7 @@ has_notch_support_p (void)
 
 #if MAC_USE_AUTORELEASE_LOOP
 void
-mac_autorelease_loop (Lisp_Object (^body) (void))
+mac_autorelease_loop (Lisp_Object (CF_NOESCAPE ^body) (void))
 {
   Lisp_Object val;
 
@@ -1017,7 +1017,7 @@ mac_trash_file (const char *filename, CFErrorRef *cferror)
 
 static void
 mac_with_current_drawing_appearance (NSAppearance *appearance,
-				     void (NS_NOESCAPE ^block) (void))
+                                     void (NS_NOESCAPE ^block) (void))
 {
   if (
 #if __clang_major__ >= 9
@@ -16657,7 +16657,7 @@ mac_within_gui (void (^block) (void))
 
 static void
 mac_within_gui_and_here (void (^block_gui) (void),
-			 void (^block_here) (void))
+                         void (CF_NOESCAPE ^block_here) (void))
 {
   eassert (!pthread_main_np ());
   eassert (mac_gui_queue.count <= 1);
