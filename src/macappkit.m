@@ -4680,6 +4680,10 @@ mac_set_tab_group_tab_bar_visible_p (struct frame *f, Lisp_Object value)
   EmacsWindow *window = FRAME_MAC_WINDOW_OBJECT (f);
   Lisp_Object __block result = Qnil;
 
+  BOOL isTransparent = FRAME_MAC_TRANSPARENT_TITLEBAR (f) ? YES : NO;
+  if (isTransparent)
+    mac_set_frame_window_transparent_titlebar (f, false);
+
   mac_within_app (^{
       NSInteger count = window.tabbedWindows.count;
 
@@ -4697,6 +4701,9 @@ mac_set_tab_group_tab_bar_visible_p (struct frame *f, Lisp_Object value)
 	  result = Qt;
 	}
     });
+
+  if (isTransparent)
+    mac_set_frame_window_transparent_titlebar (f, true);
 
   return result;
 }
