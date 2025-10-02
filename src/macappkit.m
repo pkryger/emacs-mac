@@ -4937,22 +4937,9 @@ mac_get_tab_group_selected_frame (struct frame *f)
 {
   NSWindow *window = FRAME_MAC_WINDOW_OBJECT (f);
   Lisp_Object __block result = Qnil;
-  BOOL isTransparent = FRAME_MAC_TRANSPARENT_TITLEBAR (f) ? YES : NO;
 
   if ([window respondsToSelector:@selector(tabGroup)])
-    mac_within_gui (^{
-	// TODO: perhaps move this to EmacsWindow:-tabGroup ??
-	NSWindowTabGroup *tabGroup = window.tabGroup;
-	if (!tabGroup && isTransparent &&
-	    [window respondsToSelector:@selector(titlebarAppearsTransparent)])
-	  {
-	    [window setTitlebarAppearsTransparent:NO];
-	    tabGroup = window.tabGroup;
-	    [window setTitlebarAppearsTransparent:YES];
-	  }
-	if (tabGroup)
-	  result = window.tabGroup.selectedWindow.lispFrame;
-      });
+    mac_within_gui (^{result = window.tabGroup.selectedWindow.lispFrame;});
   else if (!window.hasTitleBar)
     ;
 #if 1
