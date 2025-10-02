@@ -4802,8 +4802,24 @@ mac_set_tab_group_selected_frame (struct frame *f, Lisp_Object value)
   newSelectedWindow = FRAME_MAC_WINDOW_OBJECT (XFRAME (value));
   if ([newSelectedWindow respondsToSelector:@selector(tabGroup)])
     mac_within_app (^{
-	[newSelectedWindow exitTabGroupOverview];
-	newSelectedWindow.tabGroup.selectedWindow = newSelectedWindow;
+      EmacsSuppressTransparentTitlebarGuard *guard = NULL;
+#if !USE_ARC
+      @try
+	{
+#endif
+	  guard =
+	    [[EmacsSuppressTransparentTitlebarGuard alloc] initWithWindow:newSelectedWindow];
+
+
+	  [newSelectedWindow exitTabGroupOverview];
+	  newSelectedWindow.tabGroup.selectedWindow = newSelectedWindow;
+#if !USE_ARC
+	}
+      @finally
+	{
+	  if (guard) [guard dealloc];
+	}
+#endif
       });
   else
     mac_within_app (^{
