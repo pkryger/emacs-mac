@@ -2389,10 +2389,22 @@ static void mac_move_frame_window_structure_1 (struct frame *, int, int);
   else if ([self respondsToSelector:@selector(titlebarAppearsTransparent)] &&
 	   [self titlebarAppearsTransparent])
     {
-      [self setTitlebarAppearsTransparent:NO];
-      tg = [super tabGroup];
-      [self setTitlebarAppearsTransparent:YES];
-      return tg;
+      EmacsSuppressTransparentTitlebarGuard *guard = NULL;
+#if !USE_ARC
+      @try
+	{
+#endif
+	  guard =
+	    [[EmacsSuppressTransparentTitlebarGuard alloc] initWithWindow:self];
+	  tg = [super tabGroup];
+	  return tg;
+#if !USE_ARC
+      }
+      @finally
+	{
+	  if (guard) [guard dealloc];
+	}
+#endif
     }
   else
     return NULL;
