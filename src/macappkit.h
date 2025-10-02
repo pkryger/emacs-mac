@@ -771,6 +771,16 @@ typedef NSInteger NSGlyphProperty;
 - (void)updateWindowStyle;
 @end
 
+/* Class for temporarily switching off transparent title bar */
+
+@interface EmacsSuppressTransparentTitlebarGuard : NSObject
+{
+  NSWindow *window;
+  BOOL isTransparent;
+}
+- (instancetype)initWithWindow:(NSWindow *)w;
+@end
+
 
 /* Class for application-side double buffering.  */
 

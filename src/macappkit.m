@@ -4317,6 +4317,33 @@ static void mac_move_frame_window_structure_1 (struct frame *, int, int);
 
 @end				// EmacsFrameController
 
+@implementation EmacsSuppressTransparentTitlebarGuard
+
+- (instancetype)initWithWindow:(NSWindow*) w
+{
+  self = [super init];
+  if (self) {
+    window = w;
+    isTransparent =
+      [window respondsToSelector:@selector(titlebarAppearsTransparent)] &&
+      [window titlebarAppearsTransparent];
+    if (isTransparent)
+      [window setTitlebarAppearsTransparent:NO];
+  }
+  return self;
+}
+
+- (void)dealloc
+{
+  if (isTransparent)
+    [window setTitlebarAppearsTransparent:YES];
+#if !USE_ARC
+  [super dealloc];
+#endif
+}
+
+@end                            // EmacsSuppressTransparentTitlebarGuard
+
 /* Window Manager function replacements.  */
 
 void
