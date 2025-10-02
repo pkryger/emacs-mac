@@ -1232,7 +1232,7 @@ static bool handling_queued_nsevents_p;
        selector:@selector(willSleep:)
 	   name:NSWorkspaceWillSleepNotification
 	 object:nil];
-  
+
   [NSApp registerUserInterfaceItemSearchHandler:self];
   Vmac_help_topics = Qnil;
 
@@ -2027,6 +2027,55 @@ static void mac_move_frame_window_structure_1 (struct frame *, int, int);
 #define RESIZE_CONTROL_WIDTH (15)
 #define RESIZE_CONTROL_HEIGHT (15)
 
+@implementation EmacsSuppressTransparentTitlebarGuard
+
+- (instancetype)initWithWindow:(NSWindow*) w
+{
+  self = [super init];
+  if (self) {
+    window = w;
+    isTransparent =
+      [window respondsToSelector:@selector(titlebarAppearsTransparent)] &&
+      [window titlebarAppearsTransparent];
+    if (isTransparent)
+      [window setTitlebarAppearsTransparent:NO];
+  }
+  return self;
+}
+
+- (void)dealloc
+{
+  if (isTransparent)
+    [window setTitlebarAppearsTransparent:YES];
+#if !USE_ARC
+  [super dealloc];
+#endif
+}
+
+@end                            // EmacsSuppressTransparentTitlebarGuard
+
+#if USE_ARC
+#define EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_BEGIN(window)		\
+  __unused volatile EmacsSuppressTransparentTitlebarGuard *guard =	\
+    [[EmacsSuppressTransparentTitlebarGuard alloc]			\
+     initWithWindow:(window)]
+#define EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_END
+#else
+#define EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_BEGIN(window)	\
+  EmacsSuppressTransparentTitlebarGuard *guard = NULL;		\
+  @try								\
+    {								\
+  guard =							\
+    [[EmacsSuppressTransparentTitlebarGuard alloc]		\
+     initWithWindow:(window)]
+#define EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_END		\
+  }							\
+  @finally						\
+    {							\
+      if (guard) [guard dealloc];			\
+    }
+#endif
+
 @implementation EmacsWindow
 
 - (instancetype)initWithContentRect:(NSRect)contentRect
@@ -2389,22 +2438,10 @@ static void mac_move_frame_window_structure_1 (struct frame *, int, int);
   else if ([self respondsToSelector:@selector(titlebarAppearsTransparent)] &&
 	   [self titlebarAppearsTransparent])
     {
-      EmacsSuppressTransparentTitlebarGuard *guard = NULL;
-#if !USE_ARC
-      @try
-	{
-#endif
-	  guard =
-	    [[EmacsSuppressTransparentTitlebarGuard alloc] initWithWindow:self];
-	  tg = [super tabGroup];
-	  return tg;
-#if !USE_ARC
-      }
-      @finally
-	{
-	  if (guard) [guard dealloc];
-	}
-#endif
+      EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_BEGIN(self);
+      tg = [super tabGroup];
+      return tg;
+      EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_END;
     }
   else
     return NULL;
@@ -4329,33 +4366,6 @@ static void mac_move_frame_window_structure_1 (struct frame *, int, int);
 
 @end				// EmacsFrameController
 
-@implementation EmacsSuppressTransparentTitlebarGuard
-
-- (instancetype)initWithWindow:(NSWindow*) w
-{
-  self = [super init];
-  if (self) {
-    window = w;
-    isTransparent =
-      [window respondsToSelector:@selector(titlebarAppearsTransparent)] &&
-      [window titlebarAppearsTransparent];
-    if (isTransparent)
-      [window setTitlebarAppearsTransparent:NO];
-  }
-  return self;
-}
-
-- (void)dealloc
-{
-  if (isTransparent)
-    [window setTitlebarAppearsTransparent:YES];
-#if !USE_ARC
-  [super dealloc];
-#endif
-}
-
-@end                            // EmacsSuppressTransparentTitlebarGuard
-
 /* Window Manager function replacements.  */
 
 void
@@ -4711,27 +4721,15 @@ mac_set_tab_group_overview_visible_p (struct frame *f, Lisp_Object value)
 
   Lisp_Object __block result = Qnil;
   mac_within_app (^{
-      EmacsSuppressTransparentTitlebarGuard *guard = NULL;
-#if !USE_ARC
-      @try
+      EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_BEGIN(window);
+      if (window.tabGroup.isOverviewVisible != !NILP (value))
 	{
-#endif
-	  guard =
-	    [[EmacsSuppressTransparentTitlebarGuard alloc] initWithWindow:window];
-	  if (window.tabGroup.isOverviewVisible != !NILP (value))
-	    {
-	      /* Just setting the property window.tabGroup.overviewVisible
-		 does not show the search field on macOS 10.13 Beta.  */
-	      [NSApp sendAction:@selector(toggleTabOverview:) to:window from:nil];
-	      result = Qt;
-	    }
-#if !USE_ARC
+	  /* Just setting the property window.tabGroup.overviewVisible
+	     does not show the search field on macOS 10.13 Beta.  */
+	  [NSApp sendAction:@selector(toggleTabOverview:) to:window from:nil];
+	  result = Qt;
 	}
-      @finally
-	{
-	  if (guard) [guard dealloc];
-	}
-#endif
+      EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_END;
     });
 
   return result;
@@ -4744,35 +4742,23 @@ mac_set_tab_group_tab_bar_visible_p (struct frame *f, Lisp_Object value)
   Lisp_Object __block result = Qnil;
 
   mac_within_app (^{
-      EmacsSuppressTransparentTitlebarGuard *guard = NULL;
-#if !USE_ARC
-      @try
-	{
-#endif
-	  guard =
-	    [[EmacsSuppressTransparentTitlebarGuard alloc] initWithWindow:window];
-	  NSInteger count = window.tabbedWindows.count;
+      NSInteger count = window.tabbedWindows.count;
 
-	  if ((count != 0) == !NILP (value))
-	    result = Qnil;
-	  else if (count > 1)
-	    result = build_string ("Tab bar cannot be made invisible because of multiple tabs");
-	  else
-	    {
-	      [window exitTabGroupOverview];
-	      [NSApp sendAction:@selector(toggleTabBar:) to:window from:nil];
-	      [[NSUserDefaults standardUserDefaults]
+      if ((count != 0) == !NILP (value))
+	result = Qnil;
+      else if (count > 1)
+	result = build_string ("Tab bar cannot be made invisible because of multiple tabs");
+      else
+	{
+	  EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_BEGIN(window);
+	  [window exitTabGroupOverview];
+	  [NSApp sendAction:@selector(toggleTabBar:) to:window from:nil];
+	  [[NSUserDefaults standardUserDefaults]
 		removeObjectForKey:[@"NSWindowTabbingShoudShowTabBarKey-"
 				       stringByAppendingString:window.tabbingIdentifier]];
-	      result = Qt;
-	    }
-#if !USE_ARC
+	  result = Qt;
+	  EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_END;
 	}
-      @finally
-	{
-	  if (guard) [guard dealloc];
-	}
-#endif
     });
 
   return result;

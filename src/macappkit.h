@@ -614,6 +614,18 @@ typedef NSInteger NSGlyphProperty;
 - (BOOL)doesHoldQuit;
 @end
 
+/* A RAII class for temporarily switching off transparent title bar for
+   a window. */
+
+@interface EmacsSuppressTransparentTitlebarGuard : NSObject
+{
+  NSWindow *window;
+  BOOL isTransparent;
+}
+- (instancetype)initWithWindow:(NSWindow *)w;
+@end
+
+
 /* Like NSWindow, but allows suspend/resume resize control tracking.
    It also provides the delegate methods windowWillEnterTabOverview
    and windowDidExitTabOverview.  */
@@ -770,17 +782,6 @@ typedef NSInteger NSGlyphProperty;
 - (BOOL)shouldHaveShadow;
 - (void)updateWindowStyle;
 @end
-
-/* Class for temporarily switching off transparent title bar */
-
-@interface EmacsSuppressTransparentTitlebarGuard : NSObject
-{
-  NSWindow *window;
-  BOOL isTransparent;
-}
-- (instancetype)initWithWindow:(NSWindow *)w;
-@end
-
 
 /* Class for application-side double buffering.  */
 
