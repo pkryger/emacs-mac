@@ -2381,6 +2381,23 @@ static void mac_move_frame_window_structure_1 (struct frame *, int, int);
     return self;
 }
 
+- (NSWindowTabGroup *)tabGroup
+{
+  NSWindowTabGroup *tg = [super tabGroup];
+  if (tg)
+    return tg;
+  else if ([self respondsToSelector:@selector(titlebarAppearsTransparent)] &&
+	   [self titlebarAppearsTransparent])
+    {
+      [self setTitlebarAppearsTransparent:NO];
+      tg = [super tabGroup];
+      [self setTitlebarAppearsTransparent:YES];
+      return tg;
+    }
+  else
+    return NULL;
+}
+
 @end				// EmacsWindow
 
 @implementation EmacsFrameController
