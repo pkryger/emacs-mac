@@ -4710,22 +4710,29 @@ mac_set_tab_group_overview_visible_p (struct frame *f, Lisp_Object value)
     }
 
   Lisp_Object __block result = Qnil;
-  BOOL isTransparent = FRAME_MAC_TRANSPARENT_TITLEBAR (f) ? YES : NO;
-  if (isTransparent)
-    mac_set_frame_window_transparent_titlebar (f, false);
-
   mac_within_app (^{
-      if (window.tabGroup.isOverviewVisible != !NILP (value))
+      EmacsSuppressTransparentTitlebarGuard *guard = NULL;
+#if !USE_ARC
+      @try
 	{
-	  /* Just setting the property window.tabGroup.overviewVisible
-	     does not show the search field on macOS 10.13 Beta.  */
-	  [NSApp sendAction:@selector(toggleTabOverview:) to:window from:nil];
-	  result = Qt;
+#endif
+	  guard =
+	    [[EmacsSuppressTransparentTitlebarGuard alloc] initWithWindow:window];
+	  if (window.tabGroup.isOverviewVisible != !NILP (value))
+	    {
+	      /* Just setting the property window.tabGroup.overviewVisible
+		 does not show the search field on macOS 10.13 Beta.  */
+	      [NSApp sendAction:@selector(toggleTabOverview:) to:window from:nil];
+	      result = Qt;
+	    }
+#if !USE_ARC
 	}
+      @finally
+	{
+	  if (guard) [guard dealloc];
+	}
+#endif
     });
-
-    if (isTransparent)
-      mac_set_frame_window_transparent_titlebar (f, true);
 
   return result;
 }
