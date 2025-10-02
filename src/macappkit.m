@@ -4743,30 +4743,37 @@ mac_set_tab_group_tab_bar_visible_p (struct frame *f, Lisp_Object value)
   EmacsWindow *window = FRAME_MAC_WINDOW_OBJECT (f);
   Lisp_Object __block result = Qnil;
 
-  BOOL isTransparent = FRAME_MAC_TRANSPARENT_TITLEBAR (f) ? YES : NO;
-  if (isTransparent)
-    mac_set_frame_window_transparent_titlebar (f, false);
-
   mac_within_app (^{
-      NSInteger count = window.tabbedWindows.count;
-
-      if ((count != 0) == !NILP (value))
-	result = Qnil;
-      else if (count > 1)
-	result = build_string ("Tab bar cannot be made invisible because of multiple tabs");
-      else
+      EmacsSuppressTransparentTitlebarGuard *guard = NULL;
+#if !USE_ARC
+      @try
 	{
-	  [window exitTabGroupOverview];
-	  [NSApp sendAction:@selector(toggleTabBar:) to:window from:nil];
-	  [[NSUserDefaults standardUserDefaults]
-	    removeObjectForKey:[@"NSWindowTabbingShoudShowTabBarKey-"
-				   stringByAppendingString:window.tabbingIdentifier]];
-	  result = Qt;
-	}
-    });
+#endif
+	  guard =
+	    [[EmacsSuppressTransparentTitlebarGuard alloc] initWithWindow:window];
+	  NSInteger count = window.tabbedWindows.count;
 
-  if (isTransparent)
-    mac_set_frame_window_transparent_titlebar (f, true);
+	  if ((count != 0) == !NILP (value))
+	    result = Qnil;
+	  else if (count > 1)
+	    result = build_string ("Tab bar cannot be made invisible because of multiple tabs");
+	  else
+	    {
+	      [window exitTabGroupOverview];
+	      [NSApp sendAction:@selector(toggleTabBar:) to:window from:nil];
+	      [[NSUserDefaults standardUserDefaults]
+		removeObjectForKey:[@"NSWindowTabbingShoudShowTabBarKey-"
+				       stringByAppendingString:window.tabbingIdentifier]];
+	      result = Qt;
+	    }
+#if !USE_ARC
+	}
+      @finally
+	{
+	  if (guard) [guard dealloc];
+	}
+#endif
+    });
 
   return result;
 }
