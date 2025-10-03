@@ -2435,6 +2435,15 @@ static void mac_move_frame_window_structure_1 (struct frame *, int, int);
   NSWindowTabGroup *tg = [super tabGroup];
   if (tg)
     return tg;
+  /* On a newly created Emacs window, that has a transparent title bar
+     (e.g., as a result of (mac-transparent-titlebar . t) being present
+     in default-frame-alist, or when the transparency has been turned on
+     for a window before tabGroup has been called for the window) the
+     call to super class' -[NSWindow tabGroup] yields NULL.  The
+     workaround is to disable the transparency temporarily then call the
+     super class again.  Strangely enough, subsequent calls to
+     -[NSWindow tabGroup] (made from such a window with transparent
+     title bar) yield a proper NSWindowTabGroup object.  */
   else if ([self respondsToSelector:@selector(titlebarAppearsTransparent)] &&
 	   [self titlebarAppearsTransparent])
     {
@@ -4721,6 +4730,9 @@ mac_set_tab_group_overview_visible_p (struct frame *f, Lisp_Object value)
 
   Lisp_Object __block result = Qnil;
   mac_within_app (^{
+      /* Sending toggleTabOverview to window doesn't work when the
+	 window has transparent title bar.  Suppress the transparency
+	 temporarily for the call.  */
       EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_BEGIN(window);
       if (window.tabGroup.isOverviewVisible != !NILP (value))
 	{
@@ -4750,6 +4762,9 @@ mac_set_tab_group_tab_bar_visible_p (struct frame *f, Lisp_Object value)
 	result = build_string ("Tab bar cannot be made invisible because of multiple tabs");
       else
 	{
+	  /* Sending toggleTabBar doesn't work when the window has
+	     transparent title bar.  Suppress the transparency
+	     temporarily for the call.  */
 	  EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_BEGIN(window);
 	  [window exitTabGroupOverview];
 	  [NSApp sendAction:@selector(toggleTabBar:) to:window from:nil];
