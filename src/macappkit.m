@@ -2055,13 +2055,13 @@ static void mac_move_frame_window_structure_1 (struct frame *, int, int);
 @end                            // EmacsSuppressTransparentTitlebarGuard
 
 #if USE_ARC
-#define EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_BEGIN(window)		\
+#define EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_BEGIN (window)		\
   __unused volatile EmacsSuppressTransparentTitlebarGuard *guard =	\
     [[EmacsSuppressTransparentTitlebarGuard alloc]			\
      initWithWindow:(window)]
 #define EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_END
 #else
-#define EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_BEGIN(window)	\
+#define EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_BEGIN (window)	\
   EmacsSuppressTransparentTitlebarGuard *guard = NULL;		\
   @try								\
     {								\
@@ -2447,7 +2447,7 @@ static void mac_move_frame_window_structure_1 (struct frame *, int, int);
   else if ([self respondsToSelector:@selector(titlebarAppearsTransparent)] &&
 	   [self titlebarAppearsTransparent])
     {
-      EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_BEGIN(self);
+      EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_BEGIN (self);
       tg = [super tabGroup];
       return tg;
       EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_END;
@@ -4732,7 +4732,7 @@ mac_set_tab_group_overview_visible_p (struct frame *f, Lisp_Object value)
       /* Sending toggleTabOverview to window doesn't work when the
 	 window has transparent title bar.  Suppress the transparency
 	 temporarily for the call.  */
-      EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_BEGIN(window);
+      EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_BEGIN (window);
       if (window.tabGroup.isOverviewVisible != !NILP (value))
 	{
 	  /* Just setting the property window.tabGroup.overviewVisible
@@ -4764,7 +4764,7 @@ mac_set_tab_group_tab_bar_visible_p (struct frame *f, Lisp_Object value)
 	  /* Sending toggleTabBar doesn't work when the window has
 	     transparent title bar.  Suppress the transparency
 	     temporarily for the call.  */
-	  EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_BEGIN(window);
+	  EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_BEGIN (window);
 	  [window exitTabGroupOverview];
 	  [NSApp sendAction:@selector(toggleTabBar:) to:window from:nil];
 	  [[NSUserDefaults standardUserDefaults]
