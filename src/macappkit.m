@@ -4400,8 +4400,7 @@ mac_set_frame_window_transparent_titlebar (struct frame *f, bool transparent)
 
   mac_within_gui (^{
       if ([window respondsToSelector: @selector(titlebarAppearsTransparent)])
-	[window setTitlebarAppearsTransparent:transparent];
-    });
+	[window setTitlebarAppearsTransparent:transparent ? YES : NO];});
 }
 
 void
@@ -4769,8 +4768,8 @@ mac_set_tab_group_tab_bar_visible_p (struct frame *f, Lisp_Object value)
 	  [window exitTabGroupOverview];
 	  [NSApp sendAction:@selector(toggleTabBar:) to:window from:nil];
 	  [[NSUserDefaults standardUserDefaults]
-		removeObjectForKey:[@"NSWindowTabbingShoudShowTabBarKey-"
-				       stringByAppendingString:window.tabbingIdentifier]];
+	    removeObjectForKey:[@"NSWindowTabbingShoudShowTabBarKey-"
+				   stringByAppendingString:window.tabbingIdentifier]];
 	  result = Qt;
 	  EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_END;
 	}

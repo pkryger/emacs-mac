@@ -783,6 +783,7 @@ typedef NSInteger NSGlyphProperty;
 - (void)updateWindowStyle;
 @end
 
+
 /* Class for application-side double buffering.  */
 
 @interface EmacsBacking : NSObject
