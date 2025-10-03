@@ -2022,59 +2022,28 @@ mac_application_state (void)
 static void set_global_focus_view_frame (struct frame *);
 static void unset_global_focus_view_frame (void);
 static void mac_move_frame_window_structure_1 (struct frame *, int, int);
+static void
+mac_with_suppressed_transparent_titlebar( NSWindow* window, BOOL force, void (CF_NOESCAPE ^block) (void))
+{
+  BOOL isTransparent = force ||
+    ([window respondsToSelector:@selector(titlebarAppearsTransparent)] &&
+     [window titlebarAppearsTransparent]);
+  if (isTransparent)
+    [window setTitlebarAppearsTransparent:NO];
+  @try
+    {
+      block ();
+    }
+  @finally
+    {
+      if (isTransparent)
+	[window setTitlebarAppearsTransparent:YES];
+    }
+}
 
 #define DEFAULT_NUM_COLS (80)
 #define RESIZE_CONTROL_WIDTH (15)
 #define RESIZE_CONTROL_HEIGHT (15)
-
-@implementation EmacsSuppressTransparentTitlebarGuard
-
-- (instancetype)initWithWindow:(NSWindow*) w
-{
-  self = [super init];
-  if (self) {
-    window = w;
-    isTransparent =
-      [window respondsToSelector:@selector(titlebarAppearsTransparent)] &&
-      [window titlebarAppearsTransparent];
-    if (isTransparent)
-      [window setTitlebarAppearsTransparent:NO];
-  }
-  return self;
-}
-
-- (void)dealloc
-{
-  if (isTransparent)
-    [window setTitlebarAppearsTransparent:YES];
-#if !USE_ARC
-  [super dealloc];
-#endif
-}
-
-@end                            // EmacsSuppressTransparentTitlebarGuard
-
-#if USE_ARC
-#define EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_BEGIN (window)		\
-  __unused volatile EmacsSuppressTransparentTitlebarGuard *guard =	\
-    [[EmacsSuppressTransparentTitlebarGuard alloc]			\
-     initWithWindow:(window)]
-#define EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_END
-#else
-#define EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_BEGIN (window)	\
-  EmacsSuppressTransparentTitlebarGuard *guard = NULL;		\
-  @try								\
-    {								\
-  guard =							\
-    [[EmacsSuppressTransparentTitlebarGuard alloc]		\
-     initWithWindow:(window)]
-#define EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_END		\
-  }							\
-  @finally						\
-    {							\
-      if (guard) [guard dealloc];			\
-    }
-#endif
 
 @implementation EmacsWindow
 
@@ -2432,7 +2401,7 @@ static void mac_move_frame_window_structure_1 (struct frame *, int, int);
 
 - (NSWindowTabGroup *)tabGroup
 {
-  NSWindowTabGroup *tg = [super tabGroup];
+  __block NSWindowTabGroup *tg = [super tabGroup];
   if (tg)
     return tg;
   /* On a newly created Emacs window, that has a transparent title bar
@@ -2447,10 +2416,10 @@ static void mac_move_frame_window_structure_1 (struct frame *, int, int);
   else if ([self respondsToSelector:@selector(titlebarAppearsTransparent)] &&
 	   [self titlebarAppearsTransparent])
     {
-      EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_BEGIN (self);
-      tg = [super tabGroup];
+      mac_with_suppressed_transparent_titlebar (self, YES, ^{
+	  tg = [super tabGroup];
+	});
       return tg;
-      EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_END;
     }
   else
     return NULL;
@@ -4732,15 +4701,15 @@ mac_set_tab_group_overview_visible_p (struct frame *f, Lisp_Object value)
       /* Sending toggleTabOverview to window doesn't work when the
 	 window has transparent title bar.  Suppress the transparency
 	 temporarily for the call.  */
-      EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_BEGIN (window);
-      if (window.tabGroup.isOverviewVisible != !NILP (value))
-	{
-	  /* Just setting the property window.tabGroup.overviewVisible
-	     does not show the search field on macOS 10.13 Beta.  */
-	  [NSApp sendAction:@selector(toggleTabOverview:) to:window from:nil];
-	  result = Qt;
-	}
-      EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_END;
+      mac_with_suppressed_transparent_titlebar (window, NO, ^{
+	  if (window.tabGroup.isOverviewVisible != !NILP (value))
+	    {
+	      /* Just setting the property window.tabGroup.overviewVisible
+		 does not show the search field on macOS 10.13 Beta.  */
+	      [NSApp sendAction:@selector(toggleTabOverview:) to:window from:nil];
+	      result = Qt;
+	    }
+	});
     });
 
   return result;
@@ -4764,14 +4733,14 @@ mac_set_tab_group_tab_bar_visible_p (struct frame *f, Lisp_Object value)
 	  /* Sending toggleTabBar doesn't work when the window has
 	     transparent title bar.  Suppress the transparency
 	     temporarily for the call.  */
-	  EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_BEGIN (window);
-	  [window exitTabGroupOverview];
-	  [NSApp sendAction:@selector(toggleTabBar:) to:window from:nil];
-	  [[NSUserDefaults standardUserDefaults]
-	    removeObjectForKey:[@"NSWindowTabbingShoudShowTabBarKey-"
-				   stringByAppendingString:window.tabbingIdentifier]];
-	  result = Qt;
-	  EMACS_SUPPRESS_TRANSPARENT_TITLEBAR_END;
+	  mac_with_suppressed_transparent_titlebar (window, NO, ^{
+	      [window exitTabGroupOverview];
+	      [NSApp sendAction:@selector(toggleTabBar:) to:window from:nil];
+	      [[NSUserDefaults standardUserDefaults]
+		removeObjectForKey:[@"NSWindowTabbingShoudShowTabBarKey-"
+				       stringByAppendingString:window.tabbingIdentifier]];
+	      result = Qt;
+	    });
 	}
     });
 
