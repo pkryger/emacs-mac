@@ -4698,18 +4698,18 @@ mac_set_tab_group_overview_visible_p (struct frame *f, Lisp_Object value)
 
   Lisp_Object __block result = Qnil;
   mac_within_app (^{
-      /* Sending toggleTabOverview to window doesn't work when the
-	 window has transparent title bar.  Suppress the transparency
-	 temporarily for the call.  */
-      mac_with_suppressed_transparent_titlebar (window, NO, ^{
-	  if (window.tabGroup.isOverviewVisible != !NILP (value))
-	    {
+      if (window.tabGroup.isOverviewVisible != !NILP (value))
+	{
+	  /* Sending toggleTabOverview to window doesn't work when the
+	     window has a transparent title bar.  Suppress the
+	     transparency temporarily for the call.  */
+	  mac_with_suppressed_transparent_titlebar (window, NO, ^{
 	      /* Just setting the property window.tabGroup.overviewVisible
 		 does not show the search field on macOS 10.13 Beta.  */
 	      [NSApp sendAction:@selector(toggleTabOverview:) to:window from:nil];
-	      result = Qt;
-	    }
-	});
+	    });
+	  result = Qt;
+	}
     });
 
   return result;
@@ -4730,17 +4730,17 @@ mac_set_tab_group_tab_bar_visible_p (struct frame *f, Lisp_Object value)
 	result = build_string ("Tab bar cannot be made invisible because of multiple tabs");
       else
 	{
-	  /* Sending toggleTabBar doesn't work when the window has
-	     transparent title bar.  Suppress the transparency
-	     temporarily for the call.  */
-	  mac_with_suppressed_transparent_titlebar (window, NO, ^{
 	      [window exitTabGroupOverview];
-	      [NSApp sendAction:@selector(toggleTabBar:) to:window from:nil];
+	      /* Sending toggleTabBar doesn't work when the window has a
+		 transparent title bar.  Suppress the transparency
+		 temporarily for the call.  */
+	      mac_with_suppressed_transparent_titlebar (window, NO, ^{
+		  [NSApp sendAction:@selector(toggleTabBar:) to:window from:nil];
+		});
 	      [[NSUserDefaults standardUserDefaults]
 		removeObjectForKey:[@"NSWindowTabbingShoudShowTabBarKey-"
 				       stringByAppendingString:window.tabbingIdentifier]];
 	      result = Qt;
-	    });
 	}
     });
 
