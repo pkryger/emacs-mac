@@ -2023,9 +2023,9 @@ static void set_global_focus_view_frame (struct frame *);
 static void unset_global_focus_view_frame (void);
 static void mac_move_frame_window_structure_1 (struct frame *, int, int);
 static void
-mac_with_suppressed_transparent_titlebar( NSWindow* window, BOOL force, void (CF_NOESCAPE ^block) (void))
+mac_with_suppressed_transparent_titlebar( NSWindow* window, BOOL assumeTransparent, void (CF_NOESCAPE ^block) (void))
 {
-  BOOL isTransparent = force ||
+  BOOL isTransparent = assumeTransparent ||
     ([window respondsToSelector:@selector(titlebarAppearsTransparent)] &&
      [window titlebarAppearsTransparent]);
   if (isTransparent)
