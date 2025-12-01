@@ -2053,6 +2053,12 @@ turn_on_face (struct frame *f, struct face *face)
       if (face->underline == FACE_UNDERLINE_SINGLE
 	  || !tty->TF_set_underline_style)
 	OUTPUT1_IF (tty, tty->TS_enter_underline_mode);
+      else if (face->underline == FACE_UNDERLINE_DOUBLE_LINE
+	       && tty->TS_iTerm2_enter_underline_double)
+	OUTPUT1 (tty, tty->TS_iTerm2_enter_underline_double);
+      else if (face->underline == FACE_UNDERLINE_DASHES
+	       && tty->TS_iTerm2_enter_underline_dashes)
+	OUTPUT1 (tty, tty->TS_iTerm2_enter_underline_dashes);
       else if (tty->TF_set_underline_style)
 	{
 	  char *p;
@@ -2104,6 +2110,10 @@ static void
 turn_off_face (struct frame *f, struct face *face)
 {
   struct tty_display_info *tty = FRAME_TTY (f);
+
+  if (face->underline == FACE_UNDERLINE_DASHES
+      && tty->TS_iTerm2_exit_underline_dashes)
+    OUTPUT (tty, tty->TS_iTerm2_exit_underline_dashes);
 
   if (tty->TS_exit_attribute_mode)
     {
@@ -4620,8 +4630,14 @@ use the Bourne shell command 'TERM=...; export TERM' (C-shell:\n\
   tty->TF_set_underline_style = tigetstr ("Smulx");
   if (tty->TF_set_underline_style == (char *) (intptr_t) -1)
     tty->TF_set_underline_style = NULL;
+  tty->TS_iTerm2_enter_underline_double = tigetstr ("iT2uldblln");
+  tty->TS_iTerm2_enter_underline_dashes = tigetstr ("iT2uldshon");
+  tty->TS_iTerm2_exit_underline_dashes = tigetstr ("iT2uldshoff");
 #else
   tty->TF_set_underline_style = tgetstr ("Smulx", address);
+  tty->TS_iTerm2_enter_underline_double = tgetstr ("iT2uldblln" address);
+  tty->TS_iTerm2_enter_underline_dashes = tgetstr ("iT2uldshon", address);
+  tty->TS_iTerm2_exit_underline_dashes = tgetstr ("iT2uldshoff", address);
 #endif
   if (!tty->TF_set_underline_style && tgetflag ("Su"))
     /* Default to the kitty escape sequence.  See

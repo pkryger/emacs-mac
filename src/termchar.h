@@ -179,6 +179,28 @@ struct tty_display_info
                                          Sets the color of the underline.  Accepts a
                                          single parameter, the color index.  */
 
+  /* The following entries take precedence over Smulx. iTerm2 partially
+     supports Smulx, that is only capable of rendering style straight
+     (value of 1) and style wave (value of 3).  Any other value passed
+     to Smulx renders either style straight (values of 2, 4, and 5) or
+     style none (value of 0).
+
+     Add the following entries to a terminfo file that defines the
+     terminal that is used to run Emacs:
+
+       iT2uldblln=\E[21m,
+       iT2uldshon=\E]8;;_\E\\,
+       iT2uldshoff=\E]8;;\E\\,
+
+     Make sure that iTerm2 underlines hyperlinks in the following
+     setting:
+
+       iTerm2 -> Settings... -> Advanced -> Underline OSC 8 hyperlinks
+   */
+  const char *TS_iTerm2_enter_underline_double; /* termcap iT2uldblln entry. */
+  const char *TS_iTerm2_enter_underline_dashes; /* termcap iT2uldshon entry. */
+  const char *TS_iTerm2_exit_underline_dashes; /* termcap iT2uldshoff entry. */
+
   int RPov;                     /* # chars to start a TS_repeat */
 
   bool_bf delete_in_insert_mode : 1;    /* delete mode == insert mode */
